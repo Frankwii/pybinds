@@ -6,22 +6,17 @@ from dataclasses import dataclass
 @dataclass()
 class Command:
     def __init__(self, cmd: str):
-        self.__commands = self.create_commands(cmd)
+        self.__command = self.create_command(cmd)
 
-    def create_commands(self, cmd: str) -> list[list[str]]:
-        return list(
-            map(
-                lambda subcommand: shlex.split(subcommand.strip()),
-                cmd.split(";")
-            )
-        )
+    def create_command(self, cmd: str) -> list[str]:
+        return shlex.split(shlex.quote(cmd))
 
     def execute(self):
-        for command in self.__commands:
-            subprocess.Popen(command)
+        # TODO: Let user choose shell in config file
+        subprocess.Popen(["/bin/sh", "-c"] + self.__command)
 
     def __repr__(self):
-        return f"Command({self.__commands})"
+        return f"Command({self.__command})"
 
 @dataclass()
 class Keybind:
@@ -55,3 +50,9 @@ class BindNodeData:
                             )
                         )
                     )
+
+if __name__ == "__main__":
+    cmd="sleep 3; notify-send \"hi\""
+
+    comm = Command(cmd)
+    comm.execute()

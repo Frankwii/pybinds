@@ -40,4 +40,6 @@ if __name__ == "__main__":
 
     root_node = build_tree(config_dict)
 
+    print(root_node)
+
     # TODO: Speak to dmenu!
