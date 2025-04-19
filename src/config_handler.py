@@ -44,8 +44,11 @@ class ConfigManager:
             return BindNodeData(
                     name=bindings_dict["name"],
                     key=Keybind(bindings_dict["key"]),
-                    termination=Command(bindings_dict["termination"])
+                    termination=Command(
+                        bindings_dict["termination"],
+                        bindings_dict.get("keep_running", False)
                     )
+                )
         else:
             return BindNodeData(
                     name=bindings_dict["name"],
@@ -153,19 +156,13 @@ class ConfigManager:
             drawing_config = drawing_config
         )
 
-    @staticmethod
-    def __process_key(k: str) -> Keybind:
-        if len(k) != 1:
-            raise ValueError(f"Invalid key specified: {k} should have length 1. It has length {len(k)}")
-
-        return Keybind(k)
-
     def __key_handler(self) -> KeyHandlerConfig:
-        back_keys_input = self.__pybinds_config.get("back_keys", ["h"])
-        exit_keys_input = self.__pybinds_config.get("exit_keys", ["q"])
+        keys = self.__pybinds_config.get("action_keys", {})
+        back_keys_input = keys.get("back", ["h", "Left"])
+        exit_keys_input = keys.get("exit", ["q", "Escape"])
 
-        back_keys = list(map(ConfigManager.__process_key, back_keys_input))
-        exit_keys = list(map(ConfigManager.__process_key, exit_keys_input))
+        back_keys = list(map(lambda k: Keybind(k), back_keys_input))
+        exit_keys = list(map(lambda k: Keybind(k), exit_keys_input))
 
         return KeyHandlerConfig(back_keys = back_keys, exit_keys=exit_keys)
 

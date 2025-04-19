@@ -116,10 +116,6 @@ class KeyHandler:
         self.__current_node = node
         self.__children_hashmap = {hash(child.get_key()):child for child in node.get_all_children()}
 
-    def __notify(self, message: str):
-        # Just for debugging
-        subprocess.run(["notify-send", message])
-
 @dataclass
 class ActionHandlerConfig:
     visuals_config: VisualsHandlerConfig
@@ -160,6 +156,8 @@ class ActionHandler:
             self.__xorg_handler.request_redraw()
 
             self.__visuals_handler.draw()
+            
+            self.__current_node = node
 
     def __handle_expose_event(self):
         self.__visuals_handler.draw()
@@ -173,7 +171,7 @@ class ActionHandler:
             return False
         elif isinstance(action, Command):
             self.__execute(action)
-            return True
+            return not action.keep_running()
         elif isinstance(action, ExitProgram):
             return True
         else:
@@ -192,8 +190,14 @@ class ActionHandler:
                 self.__handle_expose_event()
 
             elif event_type == KeyPress:
+                self.__notify(str(event.detail))
                 exit_program = self.__handle_keypress_event(event.detail)
                 if exit_program:
                     break
             elif event_type == KeyRelease:
                 self.__handle_keyrelease_event(event.detail)
+
+    def __notify(self, message: str):
+        # Just for debugging
+        subprocess.run(["notify-send", message])
+

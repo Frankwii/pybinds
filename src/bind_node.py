@@ -8,14 +8,18 @@ from Xlib.XK import keysym_to_string, string_to_keysym
 
 @dataclass()
 class Command:
-    def __init__(self, cmd: str):
+    def __init__(self, cmd: str, keep_running: bool = False):
         self.__command = self.__create_command(cmd)
+        self.__keep_running = keep_running
 
     def __create_command(self, cmd: str) -> list[str]:
         return shlex.split(shlex.quote(cmd))
 
     def execute(self, shell: str):
         subprocess.Popen([shell, "-c"] + self.__command)
+        
+    def keep_running(self):
+        return self.__keep_running
 
     def __repr__(self):
         return f"Command({self.__command})"
@@ -63,17 +67,18 @@ class BindNode:
 
         else:
             children = list(
-                    map(
-                        lambda child_data: BindNode(child_data),
-                        data.termination
-                    )
+                map(
+                    lambda child_data: BindNode(child_data),
+                    data.termination
                 )
+            )
+
             for child in children:
                 child._parent = self
 
             self.__children_index = {
-                    child._key: child for child in children
-                }
+                child._key: child for child in children
+            }
 
     def get_child(self, key: Keybind) -> Optional["BindNode"]:
         return self.__children_index.get(key)
