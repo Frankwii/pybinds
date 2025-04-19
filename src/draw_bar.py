@@ -1,30 +1,36 @@
 from dataclasses import dataclass
-from pathlib import Path
 
 from PIL.Image import Image
 from Xlib import display
-from Xlib.X import Expose, ExposureMask, KeyPressMask
+from Xlib.X import CurrentTime, ExposureMask, KeyPressMask, KeyReleaseMask, RevertToParent
 
 from itertools import accumulate, chain, cycle, repeat
 
 from Xlib.protocol.rq import Event
 
-from text_rendering import TextRendererConfig, TextRenderer
+from bind_node import Keybind
 
 @dataclass
 class XOrgConfig:
     bar_height: int
     border_size: int
+    background_color: tuple[int, int, int]
+    border_color: tuple[int, int, int]
+
 
 class XOrgHandler():
     def __init__(self, config: XOrgConfig):
         self.__display = display.Display()
         self.__screen = self.__display.screen()
         self.__root_window = self.__screen.root
-
         self.__width_in_pixels = self.__screen.width_in_pixels
         self.__height_in_pixels = config.bar_height
         self.__border_size = config.border_size
+
+        self.__colormap = self.__screen.default_colormap
+        
+        background_color = self.__colormap.alloc_color(*config.background_color)
+        border_color = self.__colormap.alloc_color(*config.border_color)
 
         self.bar = self.__root_window.create_window(
                     x = 0,
@@ -32,18 +38,35 @@ class XOrgHandler():
                     width = self.__width_in_pixels,
                     height = self.__height_in_pixels,
                     depth = self.__screen.root_depth,
-                    border_width = self.__border_size,
-                    background_pixel = self.__screen.black_pixel, # TODO: Investigate how to pass this through config.
-                    border_pixel = self.__screen.white_pixel, # TODO: Investigate how to pass this through config.
-                    event_mask = (ExposureMask | KeyPressMask), # TODO: Investigate 
+                    border_width = 0,
+                    background_pixel = background_color.pixel,
+                    border_pixel = self.__screen.white_pixel,
+                    event_mask = (ExposureMask | KeyPressMask | KeyReleaseMask),
                     override_redirect = 1 # dgaf about the window manager
                 )
 
-        # Really don't care about this. It's necessary for the graphics context
+        if self.__border_size > 0:
+            self.border = self.__root_window.create_window(
+                    x = 0,
+                    y = self.__height_in_pixels,
+                    width = self.__width_in_pixels,
+                    height = self.__border_size,
+                    depth = self.__screen.root_depth,
+                    border_width = 0,
+                    background_pixel = border_color.pixel,
+                    border_pixel = self.__screen.white_pixel,
+                    event_mask = (ExposureMask),
+                    override_redirect = 1 # dgaf about the window manager
+            )
+
+            self.border.map()
+
+        # Really don't care about this. It's just necessary for the graphics context
         font = self.__display.open_font("fixed") 
         self.gc = self.bar.create_gc(font = font, foreground = self.__screen.white_pixel)
 
         self.bar.map()
+        self.bar.set_input_focus(RevertToParent, CurrentTime)
     
     def get_dimensions_in_pixels(self) -> tuple[int, int]:
         """Returns (width, height)"""
@@ -55,6 +78,23 @@ class XOrgHandler():
     def flush(self):
         self.__display.flush()
 
+    def keycode_to_keysym(self, keycode: int, is_shifted: bool) -> int:
+        return self.__display.keycode_to_keysym(keycode, is_shifted)
+
+    def keysym_to_keycode(self, keysym: int) -> int:
+        return self.__display.keysym_to_keycode(keysym)
+
+    def keysym_to_keybind(self, keysym: int) -> Keybind:
+        return Keybind(self.__display.keysym_translations[keysym])
+
+    def request_redraw(self):
+        self.bar.clear_area(
+            x = 0,
+            y = 0,
+            width = self.__width_in_pixels,
+            height = self.__height_in_pixels
+        )
+
 @dataclass
 class DrawingConfig:
     initial_padding_in_pixels: int
@@ -64,15 +104,15 @@ class DrawingConfig:
 class DrawManager():
     def __init__(
             self,
-            graphics_handler: XOrgHandler,
+            xorg_handler: XOrgHandler,
             separator_image: Image,
             key_images: list[Image],
             text_images: list[Image],
             config: DrawingConfig
             ):
-        self.__bar = graphics_handler.bar
-        self.__gc = graphics_handler.gc
-        self.__max_width, self.__bar_height = graphics_handler.get_dimensions_in_pixels()
+        self.__bar = xorg_handler.bar
+        self.__gc = xorg_handler.gc
+        self.__max_width, self.__bar_height = xorg_handler.get_dimensions_in_pixels()
         self.__text_height = separator_image.size[1]
 
         seps = repeat(separator_image)
@@ -89,7 +129,7 @@ class DrawManager():
         total_widths = map(sum, zip(widths, extras))
         
         self.__x_positions = list(accumulate(total_widths))
-        self.__y_position = (self.__bar_height - self.__text_height) // 2
+        self.__y_position = (self.__bar_height - self.__text_height)
 
         if self.__y_position < 0:
             print("WARNING: Bar height is smaller than text height. Decrease font size or increase bar size.")
@@ -98,7 +138,6 @@ class DrawManager():
             print("WARNING: Keybinds too long to fit on screen. Decrease font size or paddings. Or get a bigger screen, lol.")
 
     def draw(self):
-        # TODO: Handle case where total len is more than screen width.
         for i in range(len(self.__images)):
             self.__bar.put_pil_image(
                 gc = self.__gc,
@@ -111,47 +150,7 @@ class DrawManager():
         return list(zip(self.__x_positions, repeat(self.__y_position)))
 
 if __name__ == "__main__":
-    xconfig = XOrgConfig(
-            bar_height=20,
-            border_size=0
-            )
+    config = XOrgConfig(20, 1, (255*256, 0, 16*256), (0, 255*256, 0))
 
 
-    drawconfig = DrawingConfig(
-            initial_padding_in_pixels=10,
-            padding_in_pixels=5,
-            skip_in_pixels=10
-            )
-
-    font = "JetBrainsMonoNLNerdFont-Bold.ttf"
-    # font = "UbuntuNerdFont-Regular.ttf"
-
-    textconfig = TextRendererConfig(Path(f"/usr/share/fonts/TTF/{font}"), 14, "#000000", "#ffffff")
-    renderer = TextRenderer(textconfig)
-
-    keys=["w", "l", "s"]
-    texts=["Write", "Launch", "System"]
-    sep=":"
-
-    key_images = [renderer.render(k) for k in keys]
-    text_images = [renderer.render(f" {t}") for t in texts]
-    separator = renderer.render(sep)
-
-    graphics_handler = XOrgHandler(xconfig)
-    draw_manager = DrawManager(
-            graphics_handler,
-            separator_image=separator,
-            key_images=key_images,
-            text_images=text_images,
-            config=drawconfig
-            )
-
-    print(draw_manager.get_positions())
-
-    while True:
-        event = graphics_handler.next_event()
-
-        if event.type == Expose:
-            draw_manager.draw()
-
-        graphics_handler.flush()
+    handler = XOrgHandler(config)
