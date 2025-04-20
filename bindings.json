@@ -1,0 +1,46 @@
+{
+  "name": "root",
+  "key": "",
+  "group": [
+    {
+      "name": "System",
+      "key": "s",
+      "group": [
+        {
+          "name": "Brightness",
+          "key": "b",
+          "group": [
+            {
+              "name": "Up",
+              "key": "u",
+              "keep_running": true,
+              "command": "brightnessctl set 5%+"
+            },
+            {
+              "name": "Down",
+              "key": "d",
+              "keep_running": true,
+              "command": "brightnessctl set 5%-"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Power",
+      "key": "P",
+      "group": [
+        {
+          "key" : "O",
+          "name": "Poweroff",
+          "command": "systemctl poweroff"
+        },
+        {
+          "key" : "R",
+          "name": "Reboot",
+          "command": "systemctl reboot"
+        }
+      ]
+    }
+  ]
+}
