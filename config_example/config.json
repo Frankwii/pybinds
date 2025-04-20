@@ -13,7 +13,7 @@
     "skip_in_pixels": 20
   },
   "font":{
-    "name":"Ubuntu Mono Nerd Font",
+    "name":"Ubuntu Mono",
     "style": "Regular",
     "size": 14
   },

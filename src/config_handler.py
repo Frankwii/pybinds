@@ -130,7 +130,7 @@ class ConfigManager:
                 )
             )
         )
-        pattern = f"{name_pattern}.*-{style.capitalize()}"
+        pattern = f"{name_pattern}.*{style.capitalize()}"
 
         p1 = subprocess.run(["fc-list"], capture_output=True, text=True, check=True)
         output = str(subprocess.run(["grep", pattern], input=p1.stdout, capture_output=True, text=True).stdout)
