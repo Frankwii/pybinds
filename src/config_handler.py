@@ -1,3 +1,11 @@
+# This file is part of pybinds.
+# 
+# pybinds is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# 
+# pybinds is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with pybinds. If not, see <https://www.gnu.org/licenses/>. 
+
 import subprocess
 import json
 
@@ -40,26 +48,32 @@ class ConfigManager:
         return path
 
     def __get_bindnode_data_internal(self, bindings_dict) -> BindNodeData:
-        if isinstance(bindings_dict["termination"], str):
-            return BindNodeData(
-                    name=bindings_dict["name"],
-                    key=Keybind(bindings_dict["key"]),
-                    termination=Command(
-                        bindings_dict["termination"],
-                        bindings_dict.get("keep_running", False)
-                    )
-                )
-        else:
-            return BindNodeData(
-                    name=bindings_dict["name"],
-                    key=Keybind(bindings_dict["key"]),
-                    termination=list(
-                        map(
-                            lambda d: self.__get_bindnode_data_internal(d),
-                            bindings_dict["termination"]
-                            )
-                        )
-                    )
+        command_data = bindings_dict.get("command")
+        children_data = bindings_dict.get("group", [])
+
+        name = bindings_dict["name"]
+        key_data = bindings_dict["key"]
+        key = Keybind(key_data)
+
+        command = None
+        if command_data:
+            keep_running = bool(bindings_dict.get("keep_running", False))
+            command = Command(command_data, keep_running)
+
+        children = list(
+            map(
+                lambda data: self.__get_bindnode_data_internal(data),
+                children_data
+            )
+        )
+
+        return BindNodeData(
+            name = name,
+            key = key,
+            command = command,
+            children = children
+        )
+
     def bindnode(self) -> BindNodeData:
         return self.__get_bindnode_data_internal(self.__bindings_dict)
 

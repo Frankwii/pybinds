@@ -1,5 +1,12 @@
+# This file is part of pybinds.
+# 
+# pybinds is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# 
+# pybinds is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with pybinds. If not, see <https://www.gnu.org/licenses/>. 
+
 from dataclasses import dataclass
-import subprocess
 
 from Xlib.X import Expose, KeyPress, KeyRelease
 
@@ -190,14 +197,8 @@ class ActionHandler:
                 self.__handle_expose_event()
 
             elif event_type == KeyPress:
-                self.__notify(str(event.detail))
                 exit_program = self.__handle_keypress_event(event.detail)
                 if exit_program:
                     break
             elif event_type == KeyRelease:
                 self.__handle_keyrelease_event(event.detail)
-
-    def __notify(self, message: str):
-        # Just for debugging
-        subprocess.run(["notify-send", message])
-

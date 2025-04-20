@@ -1,3 +1,11 @@
+# This file is part of pybinds.
+# 
+# pybinds is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# 
+# pybinds is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with pybinds. If not, see <https://www.gnu.org/licenses/>. 
+
 import shlex
 import subprocess
 
@@ -34,8 +42,6 @@ class Keybind:
         elif isinstance(key, int):
             self.__string = str(keysym_to_string(key))
             self.__keysym = key
-        else:
-            raise TypeError(f"Unexpected type for `{key}` when instantiating a Keybind. Expected str or string, got {type(key)}.")
 
     def __hash__(self) -> int:
         return self.__keysym
@@ -50,7 +56,8 @@ class Keybind:
 class BindNodeData:
     name: str
     key: Keybind
-    termination: Command | list ["BindNodeData"]
+    command: Optional[Command]
+    children: list ["BindNodeData"]
 
 class BindNode:
     def __init__(self, data: BindNodeData):
@@ -59,26 +66,21 @@ class BindNode:
 
         self._parent: Optional[BindNode] = None
 
-        self.__children_index: dict[Keybind, BindNode] = {}
-        self.__command: Optional[Command] = None
+        self.__command: Optional[Command] = data.command
 
-        if isinstance(data.termination, Command):
-            self.__command = data.termination
-
-        else:
-            children = list(
-                map(
-                    lambda child_data: BindNode(child_data),
-                    data.termination
-                )
+        children = list(
+            map(
+                lambda child_data: BindNode(child_data),
+                data.children
             )
+        )
 
-            for child in children:
-                child._parent = self
+        for child in children:
+            child._parent = self
 
-            self.__children_index = {
-                child._key: child for child in children
-            }
+        self.__children_index: dict[Keybind, BindNode] = {
+            child._key: child for child in children
+        }
 
     def get_child(self, key: Keybind) -> Optional["BindNode"]:
         return self.__children_index.get(key)
