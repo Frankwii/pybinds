@@ -63,4 +63,6 @@ if __name__ == "__main__":
         config = ch.action_handler()
     )
 
+    action_handler.grab_keyboard()
+
     action_handler.loop()

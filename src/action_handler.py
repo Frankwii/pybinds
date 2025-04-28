@@ -187,6 +187,8 @@ class ActionHandler:
     def __handle_keyrelease_event(self, keycode: int):
         self.__key_handler.resolve_keyrelease(keycode)
 
+    def grab_keyboard(self):
+        self.__xorg_handler.grab_keyboard()
 
     def loop(self):
         while True:

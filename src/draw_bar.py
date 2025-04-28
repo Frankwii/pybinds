@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from PIL.Image import Image
 from Xlib import display
-from Xlib.X import CurrentTime, ExposureMask, KeyPressMask, KeyReleaseMask, RevertToParent
+from Xlib.X import CurrentTime, ExposureMask, GrabModeAsync, GrabModeSync, KeyPressMask, KeyReleaseMask, RevertToParent
 
 from itertools import accumulate, chain, cycle, repeat
 
@@ -101,6 +101,14 @@ class XOrgHandler():
             y = 0,
             width = self.__width_in_pixels,
             height = self.__height_in_pixels
+        )
+
+    def grab_keyboard(self):
+        self.bar.grab_keyboard(
+            owner_events = True,
+            pointer_mode = GrabModeSync,
+            keyboard_mode = GrabModeAsync,
+            time = CurrentTime
         )
 
 @dataclass
